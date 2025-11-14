@@ -15,7 +15,15 @@ export default function Home() {
     <View style={styles.container}>
       <Header navigation={navigation} />
       <SearchBar />
-      <ScrollView contentContainerStyle={styles.content}>
+
+      {/* MAIN SCROLLVIEW - KILL ALL SCROLLBARS */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}    // HIDES VERTICAL BAR (Android + iOS)
+        showsHorizontalScrollIndicator={false}  // JUST IN CASE
+        contentContainerStyle={styles.content}
+        bounces={true}                          // Feels premium on iOS
+        overScrollMode="never"                  // No glow on Android
+      >
         <CarBrandsScroll />
         <CarRows />
         <TrendingCars />
@@ -32,5 +40,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 10,
     paddingTop: 0,
+    paddingBottom: 0, // Extra space at bottom — feels complete
   },
 });

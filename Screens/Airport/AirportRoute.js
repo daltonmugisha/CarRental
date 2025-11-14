@@ -1,14 +1,47 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Platform,
+} from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+
+// === KING RWANDA LUXURY ALERT (SAME AS CAR RENTAL VERIFICATION) ===
+const LuxuryAlert = ({ visible, title, message, onClose }) => {
+  if (!visible) return null;
+
+  return (
+    <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
+      <View style={alertStyles.overlay}>
+        <View style={alertStyles.box}>
+          <View style={alertStyles.iconCircle}>
+            <Ionicons name="car-sport" size={40} color="#4CAF50" />
+          </View>
+          <Text style={alertStyles.title}>{title}</Text>
+          <Text style={alertStyles.message}>{message}</Text>
+          <TouchableOpacity style={alertStyles.button} onPress={onClose}>
+            <Text style={alertStyles.buttonText}>CONTINUE TO RESERVATION</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 export default function RouteAirportScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const {
-    pickupLocation: passedPickupLocation = { name: "Kigali International Airport (Kanombe)", latitude: -1.9686, longitude: 30.1395 },
+    pickupLocation: passedPickupLocation = {
+      name: "Kigali International Airport (Kanombe)",
+      latitude: -1.9686,
+      longitude: 30.1395,
+    },
     destination: passedDestination = "Downtown Kigali",
     pickupDateTime,
     flightInfo,
@@ -18,13 +51,22 @@ export default function RouteAirportScreen() {
 
   const [pickupLocation, setPickupLocation] = useState(passedPickupLocation.name);
   const [destination, setDestination] = useState(passedDestination);
-  const [pickupCoords, setPickupCoords] = useState({ latitude: passedPickupLocation.latitude, longitude: passedPickupLocation.longitude });
-  const [destinationCoords, setDestinationCoords] = useState({ latitude: -1.9530, longitude: 30.1085 });
+  const [pickupCoords] = useState({
+    latitude: passedPickupLocation.latitude,
+    longitude: passedPickupLocation.longitude,
+  });
+  const [destinationCoords, setDestinationCoords] = useState({
+    latitude: -1.9530,
+    longitude: 30.1085,
+  });
   const [routeCoords, setRouteCoords] = useState([]);
   const [selectedRide, setSelectedRide] = useState(0);
   const [mapType, setMapType] = useState('standard');
   const [isGeocoding, setIsGeocoding] = useState(true);
   const [distanceKm, setDistanceKm] = useState(0);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
 
   const rides = [
     { id: 1, name: "Economy\n(Sorento)", ratePerKm: 1000 },
@@ -40,9 +82,8 @@ export default function RouteAirportScreen() {
   };
 
   const calculatePrice = (ratePerKm, km) => {
-    if (km === 0) return '0 Rwf';
-    const total = Math.round(ratePerKm * km / 100) * 100;
-    return total.toLocaleString() + ' Rwf';
+    if (km === 0) return 0;
+    return Math.round((ratePerKm * km) / 100) * 100;
   };
 
   const getCurrentPrice = () => {
@@ -50,33 +91,68 @@ export default function RouteAirportScreen() {
     return calculatePrice(ride.ratePerKm, distanceKm);
   };
 
-  const handleReservation = () => {
-  const reservationData = {
-    pickupLocation,
-    destination,
-    selectedRide: rides[selectedRide],
-    distanceKm,
-    pickupDateTime,
-    flightInfo,
+  const showLuxuryAlert = () => {
+    const ride = rides[selectedRide];
+    const price = getCurrentPrice();
+
+    setAlertTitle(`${ride.name.trim()} Selected!`);
+    setAlertMessage(
+      `Estimated fare: ${price.toLocaleString()} RWF\n\n` +
+      `Distance: ${distanceKm.toFixed(1)} km\n` +
+      `Rate: ${ride.ratePerKm.toLocaleString()} RWF/km\n\n` +
+      `Payment after journey completed.\n` +
+      `WhatsApp confirmation in 2 mins!`
+    );
+    setAlertVisible(true);
   };
 
-  console.log('Reservation made:', reservationData);
+  const handleReservation = () => {
+    const ride = rides[selectedRide];
+    const totalPrice = getCurrentPrice();
 
-  alert(
-    `Reservation made for ${rides[selectedRide].name} - Estimate: ${getCurrentPrice()}. Pay after journey.`
-  );
+    const reservationData = {
+      pickupLocation: pickupLocation,
+      destination: destination,
+      selectedRide: {
+        ...ride,
+        totalPrice: totalPrice, // PRICE PASSED!
+      },
+      distanceKm: distanceKm,
+      pickupDateTime,
+      flightInfo,
+    };
 
-  navigation.navigate('AirportReservation', reservationData);
-};
+    console.log('Reservation made:', reservationData);
 
+    // Show luxury alert first
+    showLuxuryAlert();
+
+    // Navigate after user taps "Continue"
+    // We'll handle navigation in onClose
+  };
+
+  const handleContinueToReservation = () => {
+    setAlertVisible(false);
+    const ride = rides[selectedRide];
+    const totalPrice = getCurrentPrice();
+
+    navigation.navigate('AirportReservation', {
+      pickupLocation,
+      destination,
+      selectedRide: {
+        ...ride,
+        totalPrice: totalPrice,
+      },
+      distanceKm,
+      pickupDateTime,
+      flightInfo,
+    });
+  };
 
   useEffect(() => {
     const geocodeAndFetch = async () => {
       try {
         setIsGeocoding(true);
-
-        // Use passed pickup coords directly (no geocoding for airport)
-        // let pickup = pickupCoords; // Already set from params
 
         let dest = destinationCoords;
         if (destination) {
@@ -101,13 +177,13 @@ export default function RouteAirportScreen() {
           setDistanceKm(distanceMeters / 1000);
         }
       } catch (error) {
-        console.error('Error geocoding/fetching directions:', error);
+        console.error('Error:', error);
       } finally {
         setIsGeocoding(false);
       }
     };
     geocodeAndFetch();
-  }, [destination, pickupCoords]);
+  }, [destination]);
 
   const decodePolyline = (encoded) => {
     try {
@@ -137,14 +213,13 @@ export default function RouteAirportScreen() {
       }
       return points;
     } catch (error) {
-      console.error('Polyline decode error:', error);
       return [];
     }
   };
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={25} color="#21292B" />
@@ -152,25 +227,29 @@ export default function RouteAirportScreen() {
         <View style={styles.headerContent}>
           <View style={styles.titleRow}>
             <Text style={styles.headerTitle}>Airport Shuttle</Text>
-            <TouchableOpacity onPress={() => setMapType(mapType === 'standard' ? 'satellite' : 'standard')} style={styles.mapToggle}>
+            <TouchableOpacity onPress={() => setMapType(mapType === 'standard' ? 'satellite' : 'standard')}>
               <Ionicons name={mapType === 'standard' ? "earth" : "map"} size={28} color="#21292B" />
             </TouchableOpacity>
           </View>
           <View style={styles.routeRow}>
             <View style={styles.fromContainer}>
               <Text style={styles.fromLabel}>From:</Text>
-              <Text style={styles.fromLocation} numberOfLines={1} ellipsizeMode="tail">{truncateLocation(pickupLocation)}</Text>
+              <Text style={styles.fromLocation} numberOfLines={1}>
+                {truncateLocation(pickupLocation)}
+              </Text>
             </View>
             <View style={styles.toContainer}>
               <Text style={styles.toLabel}>To:</Text>
-              <Text style={styles.toLocation} numberOfLines={1} ellipsizeMode="tail">{truncateLocation(destination)}</Text>
+              <Text style={styles.toLocation} numberOfLines={1}>
+                {truncateLocation(destination)}
+              </Text>
             </View>
           </View>
         </View>
       </View>
       <View style={styles.separator} />
 
-      {/* Map */}
+      {/* MAP */}
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -178,38 +257,41 @@ export default function RouteAirportScreen() {
         region={{
           latitude: pickupCoords.latitude,
           longitude: pickupCoords.longitude,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
+          latitudeDelta: 0.03,
+          longitudeDelta: 0.03,
         }}
         loadingEnabled={isGeocoding}
       >
-        <Marker coordinate={pickupCoords} title={pickupLocation} pinColor="blue" />
-        <Marker coordinate={destinationCoords} title={destination} pinColor="green" />
+        <Marker coordinate={pickupCoords} title={pickupLocation} pinColor="#4285F4" />
+        <Marker coordinate={destinationCoords} title={destination} pinColor="#34A853" />
         {routeCoords.length > 0 && (
-          <Polyline coordinates={routeCoords} strokeColor="#4285F4" strokeWidth={4} />
+          <Polyline coordinates={routeCoords} strokeColor="#4285F4" strokeWidth={5} />
         )}
       </MapView>
 
-      {/* Ride buttons */}
+      {/* RIDE BUTTONS */}
       <View style={styles.rideButtons}>
-        {rides.map((ride, idx) => {
-          const price = calculatePrice(ride.ratePerKm, distanceKm);
-          return (
-            <TouchableOpacity
-              key={ride.id}
-              style={[styles.rideButton, selectedRide === idx && styles.selectedRide]}
-              onPress={() => setSelectedRide(idx)}
-            >
-              <Text style={styles.rideName}>{ride.name}</Text>
-              <Text style={styles.ridePrice}>{price}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        { rides.map((ride, idx) => {
+  const price = calculatePrice(ride.ratePerKm, distanceKm);  // FIXED: ratePerKm NOT ratePerarPerKm
+  return (
+    <TouchableOpacity
+      key={ride.id}
+      style={[styles.rideButton, selectedRide === idx && styles.selectedRide]}
+      onPress={() => setSelectedRide(idx)}
+    >
+      <Text style={styles.rideName}>{ride.name}</Text>
+      <Text style={styles.ridePrice}>
+        {price > 0 ? `${price.toLocaleString()} RWF` : 'Calculating...'}
+      </Text>
+    </TouchableOpacity>
+  );
+})}
       </View>
 
+      {/* PAYMENT CARD */}
       <View style={styles.paymentCard}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={styles.paymentTitle}>Payment method</Text>
+          <Text style={styles.paymentTitle}>Payment Method</Text>
           <Ionicons name="card-outline" size={25} color="#21292B" />
         </View>
         <View style={styles.separatorFull} />
@@ -223,7 +305,8 @@ export default function RouteAirportScreen() {
               selectedRide: rides[selectedRide],
               distanceKm,
               pickupDateTime,
-              flightInfo
+              flightInfo,
+              totalPrice: getCurrentPrice(),
             })}
           >
             <Text style={styles.paymentButtonText}>RIDE NOW</Text>
@@ -234,10 +317,76 @@ export default function RouteAirportScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* LUXURY ALERT */}
+      <LuxuryAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        onClose={handleContinueToReservation}
+      />
     </View>
   );
 }
 
+// === LUXURY ALERT STYLES (SAME AS CAR RENTAL) ===
+const alertStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  box: {
+    width: '88%',
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 25,
+    elevation: 25,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 21,
+    fontWeight: 'bold',
+    color: '#21292B',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  message: {
+    fontSize: 15.5,
+    color: '#444',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 28,
+  },
+  button: {
+    backgroundColor: '#21292B',
+    paddingHorizontal: 36,
+    paddingVertical: 16,
+    borderRadius: 14,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+});
+
+// === MAIN STYLES ===
 const styles = StyleSheet.create({
   header: { 
     flexDirection: "row", 
@@ -245,19 +394,19 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 50 : 40, 
     paddingHorizontal: 10,
     backgroundColor: 'white',
+    paddingBottom: 12,
   },
   headerContent: { flex: 1, marginLeft: 10 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: "bold", color: "#21292B" },
-  mapToggle: { marginLeft: 10 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#21292B" },
   routeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
   fromContainer: { flex: 1, marginRight: 20 },
   toContainer: { flex: 1 },
   fromLabel: { fontSize: 14, fontWeight: "bold", color: "#21292B" },
-  fromLocation: { fontSize: 14, color: "#666" },
+  fromLocation: { fontSize: 14, color: "#666", marginTop: 2 },
   toLabel: { fontSize: 14, fontWeight: "bold", color: "#21292B" },
-  toLocation: { fontSize: 14, color: "#666" },
-  separator: { height: 1, backgroundColor: "#d7d7d7", marginHorizontal: 10, marginTop: 10 },
+  toLocation: { fontSize: 14, color: "#666", marginTop: 2 },
+  separator: { height: 1, backgroundColor: "#eee", marginHorizontal: 10 },
   map: { flex: 1 },
   rideButtons: {
     position: "absolute",
@@ -269,26 +418,36 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   rideButton: {
-    width: 80,
-    height: 80,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 40,
+    width: 88,
+    height: 88,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 44,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: "rgba(33,41,43,0.2)",
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1.5,
+    borderColor: "rgba(33,41,43,0.15)",
   },
   selectedRide: {
-    backgroundColor: "#D7D7D7",
+    backgroundColor: "#fff",
     borderColor: "#21292B",
-    borderWidth: 2,
   },
-  rideName: { fontSize: 10, fontWeight: "bold", color: "#21292B", textAlign: 'center' },
-  ridePrice: { fontSize: 10, fontWeight: "bold", color: "#21292B", marginTop: 2 },
+  rideName: { 
+    fontSize: 10.5, 
+    fontWeight: "bold", 
+    color: "#21292B", 
+    textAlign: 'center',
+    lineHeight: 13,
+  },
+  ridePrice: { 
+    fontSize: 11, 
+    fontWeight: "bold", 
+    color: "#21292B", 
+    marginTop: 4 
+  },
   paymentCard: {
     position: "absolute",
     bottom: 0,
@@ -296,18 +455,30 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "white",
     padding: 20,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
   },
-  paymentTitle: { fontSize: 14, fontWeight: "bold", color: "#21292B" },
-  separatorFull: { height: 1, backgroundColor: "#d7d7d7", marginVertical: 10, width: "100%" },
-  paymentButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 15 },
-  paymentButton: { flex: 0.48, backgroundColor: "#21292B", paddingVertical: 12, marginBottom: 10, borderRadius: 10, alignItems: "center" },
-  paymentButtonText: { color: "white", fontWeight: "bold", fontSize: 10 },
-  reservationButton: { flex: 0.48, backgroundColor: "#4285F4", paddingVertical: 12, borderRadius: 10, alignItems: "center", marginBottom: 10 },
-  reservationButtonText: { color: "white", fontWeight: "bold", fontSize: 10 },
+  paymentTitle: { fontSize: 15, fontWeight: "bold", color: "#21292B" },
+  separatorFull: { height: 1.5, backgroundColor: "#e0e0e0", marginVertical: 12 },
+  paymentButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
+  paymentButton: { 
+    flex: 0.48, 
+    backgroundColor: "#21292B", 
+    paddingVertical: 16, 
+    borderRadius: 14, 
+    alignItems: "center" 
+  },
+  paymentButtonText: { color: "white", fontWeight: "bold", fontSize: 12 },
+  reservationButton: { 
+    flex: 0.48, 
+    backgroundColor: "#4285F4", 
+    paddingVertical: 16, 
+    borderRadius: 14, 
+    alignItems: "center"
+  },
+  reservationButtonText: { color: "white", fontWeight: "bold", fontSize: 12 },
 });

@@ -14,7 +14,7 @@ export default function VerifyPhone({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Back Arrow */}
+    
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -22,22 +22,22 @@ export default function VerifyPhone({ navigation }) {
         <Ionicons name="arrow-back" size={24} color="#21292B" />
       </TouchableOpacity>
 
-      {/* Title */}
+     
       <Text style={styles.title}>Verify Your Phone Number</Text>
       <Text style={styles.subtitle}>
         Please confirm your country and enter your phone number.
       </Text>
 
-      {/* Country Row */}
+     
       <View style={styles.countryRow}>
         <Image
-          source={require("../assets/rw.jpeg")} // Rwanda flag image
+          source={require("../assets/rw.jpeg")} 
           style={styles.flagIcon}
         />
         <Text style={styles.countryText}>Rwanda</Text>
       </View>
 
-      {/* Phone Row */}
+      
       <View style={styles.phoneRow}>
         <Text style={styles.countryCode}>+250</Text>
         <TextInput
@@ -50,10 +50,10 @@ export default function VerifyPhone({ navigation }) {
         />
       </View>
 
-      {/* Continue Button */}
+    
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => navigation.navigate("Otp")} // navigate to OTP screen
+        onPress={() => navigation.navigate("Otp")} 
       >
         <Text style={styles.primaryButtonText}>Continue</Text>
       </TouchableOpacity>

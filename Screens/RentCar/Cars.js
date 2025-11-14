@@ -301,27 +301,19 @@ export default function CarResultsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const params = route.params || {};
-  
+
   console.log('CarResults received params:', params);
 
-  // Create safe ISO date strings
   const createSafeDateString = (dateInput, fallback) => {
     if (!dateInput) return fallback.toISOString();
-    
     try {
       if (dateInput instanceof Date) {
         return isNaN(dateInput.getTime()) ? fallback.toISOString() : dateInput.toISOString();
       }
-      
-      // If it's already an ISO string, validate it
       if (typeof dateInput === 'string') {
         const testDate = new Date(dateInput);
-        if (!isNaN(testDate.getTime())) {
-          return dateInput; // It's already a valid ISO string
-        }
+        if (!isNaN(testDate.getTime())) return dateInput;
       }
-      
-      // Try to parse it
       const parsedDate = new Date(dateInput);
       return isNaN(parsedDate.getTime()) ? fallback.toISOString() : parsedDate.toISOString();
     } catch (e) {
@@ -337,9 +329,24 @@ export default function CarResultsScreen() {
   console.log('Safe return string:', safeReturnDate);
 
   const handleCarPress = (car) => {
-    console.log('Navigating with dates:', { pickupDate: safePickupDate, returnDate: safeReturnDate });
+    // ENHANCED CAR DATA WITH IMAGES + REVIEWS
+    const enhancedCar = {
+      ...car,
+      images: car.images || [
+        null, // main image from local asset
+        "https://di-Uploads-pod16.dealerinspire.com/fordofwestmemphis/uploads/2023/01/2023-Ford-Transit-Cargo-Van-Interior.jpg",
+        "https://di-Uploads-pod16.dealerinspire.com/fordofwestmemphis/uploads/2023/01/2023-Ford-Transit-Cargo-Van-Seats.jpg",
+      ],
+      features: car.features || ['Air Conditioning', 'Bluetooth', 'USB Ports', 'GPS'],
+      reviews: car.reviews || [
+        { user: 'John Doe', rating: 5, comment: 'Amazing car! Smooth ride and great value.', avatar: 'https://i.pravatar.cc/150?img=12' },
+        { user: 'Sarah Smith', rating: 4, comment: 'Really happy. Car was clean and on time.', avatar: 'https://i.pravatar.cc/150?img=45' },
+        { user: 'Mike Johnson', rating: 5, comment: 'Best rental experience in Kigali!', avatar: 'https://i.pravatar.cc/150?img=33' },
+      ],
+    };
+
     navigation.navigate('CarDetails', { 
-      car, 
+      car: enhancedCar, 
       pickupDate: safePickupDate, 
       returnDate: safeReturnDate 
     });

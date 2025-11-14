@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions }
 
 const { width, height } = Dimensions.get("window");
 
-export default function SplashScreen({ navigation }) { // get navigation from props
+export default function SplashScreen({ navigation }) { 
   return (
     <View style={styles.container}>
       <ImageBackground
@@ -13,17 +13,16 @@ export default function SplashScreen({ navigation }) { // get navigation from pr
       >
         <View style={styles.overlay} />
 
-        {/* Bottom content */}
+       
         <View style={styles.bottom}>
           <Text style={styles.title}>Start your journey with GoSnap</Text>
           <Text style={styles.subtitle}>
             Discover your next adventure with GoSnap. We’re here to provide you with a seamless car rental experience. Let’s get started on your journey.
           </Text>
 
-          {/* Get Started Button */}
           <TouchableOpacity
             style={styles.getStartedButton}
-            onPress={() => navigation.navigate("Login")} // navigate to Login screen
+            onPress={() => navigation.navigate("Login")} 
           >
             <Text style={styles.getStartedText}>Get Started</Text>
           </TouchableOpacity>

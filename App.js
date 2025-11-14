@@ -45,6 +45,8 @@ import RouteAirportScreen from './Screens/Airport/AirportRoute';
 import ReservationAirportScreen from './Screens/Airport/Reservation';
 import MyPaymentsScreen from './Screens/Home/MyPayments';
 import PaymentDetailsScreen from './Screens/Home/MyPaymentsDetails';
+import TripHistoryScreen from './Screens/Home/TripHistory';
+import TripDetailsScreen from './Screens/Home/TripDetailsScreen';
 
 // Create Navigators
 const Stack = createNativeStackNavigator();
@@ -161,6 +163,8 @@ export default function App() {
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="NewPayment" component={AddPaymentScreen} />
           <Stack.Screen name="MyPayments" component={MyPaymentsScreen} />
+          <Stack.Screen name="TripHistoryScreen" component={TripHistoryScreen} />
+          <Stack.Screen name="TripDetails" component={TripDetailsScreen} />
           <Stack.Screen name="MyPaymentsDetails" component={PaymentDetailsScreen} />
           <Stack.Screen name="HomeAddress" component={AddHomeAddressScreen} />
           <Stack.Screen name="WorkAddress" component={AddWorkAddressScreen} />
